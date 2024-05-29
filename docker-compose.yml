@@ -1,0 +1,107 @@
+version: "3.8"
+
+services:
+  redis_flask:
+    image: redis:7.0.10
+    container_name: redis_flask
+    restart: always
+    volumes:
+      - redis_flask_volume_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - flask_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "com.example.service=redis_flask"
+
+  flask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flask
+    restart: always
+    ports:
+      - "5000:5000"
+    networks:
+      - flask_network
+    depends_on:
+      redis_flask:
+        condition: service_healthy
+    volumes:
+      - flask_volumes:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres_flask:5432/postgres
+      - CELERY_BROKER_URL=redis://redis_flask:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis_flask:6379/0
+    labels:
+      - "com.example.service=flask"
+
+  celery_flask_worker:
+    container_name: celery_flask_worker
+    build: .
+    command: celery -A user_async.services worker --loglevel=info
+    volumes:
+      - flask_volumes:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis_flask:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis_flask:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres_flask:5432/postgres
+    networks:
+      - flask_network
+    depends_on:
+      - flask
+      - redis_flask
+
+  flower_flask:
+    container_name: flower_flask
+    build: .
+    command: celery -A user_async.services flower --port=5556
+    volumes:
+      - flask_volumes:/app
+    ports:
+      - "5557:5556"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres_flask:5432/postgres
+      - CELERY_BROKER_URL=redis://redis_flask:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis_flask:6379/0
+    networks:
+      - flask_network
+    depends_on:
+      - flask
+      - redis_flask
+      - celery_flask_worker
+  postgres_flask:
+    image: postgres:14
+    container_name: postgres_flask
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_flask_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - flask_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "com.example.service=postgres"
+
+volumes:
+  redis_flask_volume_data:
+  redis_insight_flask_volume_data:
+  flask_volumes:
+  postgres_flask_data:
+
+networks:
+  flask_network:
