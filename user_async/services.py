@@ -23,11 +23,5 @@ def create_user(nickname: str, password: str, info: str):
         db.commit()
         db.refresh(user)
         return user.to_json()
-    except IntegrityError:
-        db.rollback()
-        return {
-            'exception': 'UserExistsException',
-            'msg': 'User with this nickname already exists'
-        }
     finally:
         db.close()

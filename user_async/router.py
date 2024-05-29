@@ -3,6 +3,7 @@ from user_async.services import create_user
 
 router = Blueprint('user_async', __name__, url_prefix='/user_async', template_folder='templates')
 
+
 @router.route('/add', methods=['GET', 'POST'])
 def add_user():
     if request.method == 'POST':
