@@ -40,6 +40,8 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis_flask:6379/0
     labels:
       - "com.example.service=flask"
+    expose:
+      - "5000"
 
   celery_flask_worker:
     container_name: celery_flask_worker
@@ -75,6 +77,7 @@ services:
       - flask
       - redis_flask
       - celery_flask_worker
+
   postgres_flask:
     image: postgres:14
     container_name: postgres_flask
@@ -96,6 +99,21 @@ services:
       retries: 3
     labels:
       - "com.example.service=postgres"
+
+  nginx_flask:
+    build:
+      dockerfile: Dockerfile
+      context: ./nginx
+    container_name: nginx_flask
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - flask_network
+    depends_on:
+      - flask
+    labels:
+      - "com.example.service=nginx"
 
 volumes:
   redis_flask_volume_data:
