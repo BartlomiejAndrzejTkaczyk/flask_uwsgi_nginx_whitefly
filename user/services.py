@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy.exc import IntegrityError
-
 from common.database import SessionLocal
-from user.expections import UserExistsException
 
 from common.security import hashing_password
 from common.models import User
@@ -16,21 +13,14 @@ def find_user_by(nickname: str) -> User | None:
     return user
 
 
-def create_user(nickname: str, password: str, info: str) -> User | None:
+def create_user(nickname: str, password: str, info: str) -> User:
     db = SessionLocal()
-
-    is_exists = find_user_by(nickname=nickname) is not None
-    if is_exists:
-        raise UserExistsException()
 
     try:
         user = User(nickname=nickname, hash_password=hashing_password(password), info=info)
         db.add(user)
         db.commit()
         db.refresh(user)
-        return user.to_json()
-    except IntegrityError:
-        db.rollback()
-        raise UserExistsException()
+        return user
     finally:
         db.close()
