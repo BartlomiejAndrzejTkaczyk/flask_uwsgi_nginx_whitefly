@@ -2,7 +2,6 @@ import os
 
 from celery import Celery
 from dotenv import load_dotenv
-from sqlalchemy.exc import IntegrityError
 
 from common.database import SessionLocal
 from common.models import User

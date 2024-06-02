@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, render_template
 from user_async.services import create_user
 
 router = Blueprint('user_async', __name__, url_prefix='/user_async', template_folder='templates')
